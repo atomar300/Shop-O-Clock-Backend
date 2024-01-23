@@ -8,11 +8,11 @@
 			<version>3.0.6</version>
 			<relativePath/> <!-- lookup parent from repository -->
 		</parent>
-		<groupId>com.sixpackprogrammer</groupId>
-		<artifactId>Shop O Clock</artifactId>
+		<groupId>com.ashish</groupId>
+		<artifactId>shopoclock</artifactId>
 		<version>0.0.1-SNAPSHOT</version>
-		<name>ecommerce</name>
-		<description>Demo project for Spring Boot</description>
+		<name>Shop O Clock Backend</name>
+		<description>Shop O'Clock Server</description>
 		<properties>
 			<java.version>17</java.version>
 		</properties>
