@@ -99,19 +99,8 @@ public class ProductService {
 
     }
 
-//    public Optional<Product> findById(String id) throws ProductNotFoundException {
-//        return Optional.ofNullable(productRepository.findById(id)
-//                .orElseThrow(() -> new ProductNotFoundException("No Product found for the given ID: " + id)));
-//
-//    }
-
 
     public void delete(String id) {
-//        Optional<Product> productData = productRepository.findById(id);
-//        if(productData.isEmpty()) {
-//            throw new ProductNotFoundException("No Product found for the given ID: "+id);
-//        }
-//        Product product = productData.get();
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ProductNotFoundException("No Product found for the given ID: " + id));
 
@@ -127,11 +116,6 @@ public class ProductService {
 
 
     public Product updateProduct(String id, ProductUpdateRequest productUpdateRequest) throws ProductNotFoundException {
-//        Optional<Product> productData = productRepository.findById(id);
-//        if (productData.isEmpty()){
-//            throw new ProductNotFoundException("No Product found for the given ID: "+ id);
-//        }
-//        Product _product = productData.get();
 
         Product _product = productRepository.findById(id)
                 .orElseThrow(() -> new ProductNotFoundException("No Product found for the given ID: " + id));

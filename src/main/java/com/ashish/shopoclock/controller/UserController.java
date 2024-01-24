@@ -3,6 +3,7 @@ package com.ashish.shopoclock.controller;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 
 import com.ashish.shopoclock.dto.response.UserResponse;
@@ -12,6 +13,7 @@ import com.ashish.shopoclock.model.User;
 import com.ashish.shopoclock.repository.RoleRepository;
 import com.ashish.shopoclock.security.JwtUtils;
 import com.ashish.shopoclock.service.EmailService;
+import com.ashish.shopoclock.service.UserDetailsImpl;
 import com.ashish.shopoclock.service.UserService;
 import com.ashish.shopoclock.exception.UserNotFoundException;
 import com.ashish.shopoclock.dto.request.UserUpdateRequest;
@@ -25,6 +27,8 @@ import org.springframework.http.*;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -59,14 +63,15 @@ public class UserController {
 
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(@Valid @RequestBody LoginRequest loginRequest) throws BadCredentialsException {
-        ResponseCookie jwtCookie = userService.loginUser(loginRequest.getEmail(), loginRequest.getPassword());
-        User user = userService.getUserFromCookie(jwtCookie.getValue());
+        String jwt = userService.loginUser(loginRequest.getEmail(), loginRequest.getPassword());
+
+        User user = userService.findById(jwtUtils.getIdFromJwtToken(jwt));
 
         UserResponse response = new UserResponse();
         response.setUser(user);
-        response.setToken(jwtCookie.getValue().toString());
-        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
-                .body(response);
+        response.setToken(jwt);
+
+        return ResponseEntity.ok().body(response);
     }
 
 
@@ -93,87 +98,28 @@ public class UserController {
         userService.save(user);
 
         // Sending jwt token without having to login
-        ResponseCookie jwtCookie = userService.loginUser(signUpRequest.getEmail(), signUpRequest.getPassword());
+        String jwt = userService.loginUser(signUpRequest.getEmail(), signUpRequest.getPassword());
 
         UserResponse response = new UserResponse();
         response.setUser(user);
-        response.setToken(jwtCookie.getValue().toString());
-        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
-                .body(response);
+        response.setToken(jwt);
+
+        return ResponseEntity.ok().body(response);
     }
-
-
-//    Previous registerUser code
-//    @PostMapping("/register")
-//    public ResponseEntity<?> registerUser(@Valid @ModelAttribute SignupRequest signUpRequest) throws Exception {
-//        if (userService.existsByEmail(signUpRequest.getEmail())) {
-//            throw new Exception("Email is already taken!");
-//        }
-//
-//        String base64 = signUpRequest.getAvatar();
-//        byte[] data = DatatypeConverter.parseBase64Binary(base64.split(",")[1]);
-//        Map imageData = this.cloudinaryImageService.upload(data);
-//        Avatar avatar = new Avatar((String) imageData.get("public_id"), (String) imageData.get("secure_url"));
-//
-//
-//        // Create new user's account
-//        User user = new User(signUpRequest.getName(),
-//                signUpRequest.getEmail(),
-//                encoder.encode(signUpRequest.getPassword()),
-//                avatar
-//                );
-//
-//        List<String> strRoles = signUpRequest.getRoles();
-//        List<Role> roles = new ArrayList<>();
-//
-//        strRoles.forEach(role -> {
-//            switch (role) {
-//                case "admin":
-//                    Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
-//                            .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-//                    roles.add(adminRole);
-//
-//                    break;
-//                case "mod":
-//                    Role modRole = roleRepository.findByName(ERole.ROLE_MODERATOR)
-//                            .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-//                    roles.add(modRole);
-//
-//                    break;
-//                case "user":
-//                    Role userRole = roleRepository.findByName(ERole.ROLE_USER)
-//                            .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-//                    roles.add(userRole);
-//            }
-//        });
-//
-//        user.setRoles(roles);
-//        userService.save(user);
-//
-//        // Sending jwt token without having to login
-//        ResponseCookie jwtCookie = userService.loginUser(signUpRequest.getEmail(), signUpRequest.getPassword());
-//
-//        UserResponse response = new UserResponse();
-//        response.setUser(user);
-//        response.setToken(jwtCookie.getValue().toString());
-//        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
-//                .body(response);
-//    }
 
 
     @GetMapping("/logout")
     public ResponseEntity<?> logoutUser() {
+
         // Setting the security context to null
         SecurityContextHolder.getContext().setAuthentication(null);
 
-        // Setting the value of cookie to empty String
-        ResponseCookie cookie = jwtUtils.getCleanJwtCookie();
-
         UserResponse response = new UserResponse();
         response.setMessage("Logged Out!");
-        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString())
-                .body(response);
+
+        return ResponseEntity.ok().body(response);
     }
+
 
     @PostMapping("/password/forgot")
     public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> payload, HttpServletRequest request) throws UserNotFoundException {
@@ -239,9 +185,9 @@ public class UserController {
 
     @GetMapping("/me")
     @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<UserResponse> getUserDetails(@CookieValue("ashish") String ashishCookie) {
-        // Cookie name is ashish and value of this cookie is the JwtToken. Cookie has many different attributes like value, maxtime, path etc.
-        User user = userService.getUserFromCookie(ashishCookie);
+    public ResponseEntity<UserResponse> getUserDetails(HttpServletRequest request) {
+
+        User user = userService.getUserFromJwt(request);
 
         UserResponse response = new UserResponse();
         response.setUser(user);
@@ -250,10 +196,9 @@ public class UserController {
 
     @PutMapping("/password/update")
     @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<?> updatePassword(@RequestBody @Valid UserUpdateRequest userUpdateRequest, @CookieValue("ashish") String ashishCookie) throws Exception {
+    public ResponseEntity<?> updatePassword(@RequestBody @Valid UserUpdateRequest userUpdateRequest, HttpServletRequest request) throws Exception {
 
-        // Cookie name is ashish and value of this cookie is the JwtToken. i.e. ashish = value of token
-        User user = userService.getUserFromCookie(ashishCookie);
+        User user = userService.getUserFromJwt(request);
 
         // Encoder is using bCryptPasswordEncoder in the background.
         // Comparing the passwords using matches() method in bCryptPasswordEncoder.
@@ -272,7 +217,6 @@ public class UserController {
 
         UserResponse response = new UserResponse();
         response.setUser(user);
-        response.setToken(ashishCookie);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -280,10 +224,9 @@ public class UserController {
 
     @PutMapping("/me/update")
     @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<?> updateProfile(@Valid @ModelAttribute UserUpdateRequest userUpdateRequest, @CookieValue("ashish") String ashishCookie) {
+    public ResponseEntity<?> updateProfile(@Valid @ModelAttribute UserUpdateRequest userUpdateRequest,  HttpServletRequest request) {
 
-        // Cookie name is ashish and value of this cookie is the JwtToken. i.e. ashish = value of token
-        User user = userService.getUserFromCookie(ashishCookie);
+        User user = userService.getUserFromJwt(request);
 
         if (!userUpdateRequest.getAvatar().equals("")) {
             String imageId = user.getAvatar().getPublic_id();
@@ -333,28 +276,6 @@ public class UserController {
         User user = userService.findById(id);
 
         List<String> strRoles = userUpdateRequest.getRoles();
-
-//        strRoles.forEach(role -> {
-//            switch (role) {
-//                case "admin":
-//                    Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
-//                            .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-//                    roles.add(adminRole);
-//
-//                    break;
-//                case "mod":
-//                    Role modRole = roleRepository.findByName(ERole.ROLE_MODERATOR)
-//                            .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-//                    roles.add(modRole);
-//
-//                    break;
-//                default:
-//                    Role userRole = roleRepository.findByName(ERole.ROLE_USER)
-//                            .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-//                    roles.add(userRole);
-//            }
-//        });
-
 
         // We may not want to change name so for that we wrote a condition
         if (userUpdateRequest.getName() != null) {

@@ -8,8 +8,8 @@ import com.ashish.shopoclock.security.JwtUtils;
 import com.ashish.shopoclock.exception.UserNotFoundException;
 import com.ashish.shopoclock.repository.RoleRepository;
 import com.ashish.shopoclock.repository.UserRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -80,14 +80,13 @@ public class UserService {
         return userRepository.findAll();
     }
 
-    public ResponseCookie loginUser(String email, String password) throws BadCredentialsException {
+    public String loginUser(String email, String password) throws BadCredentialsException {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(email, password));
         SecurityContextHolder.getContext().setAuthentication(authentication);
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        ResponseCookie jwtCookie = jwtUtils.generateJwtCookie(userDetails);
+        String jwt = jwtUtils.generateJwtToken(authentication);
 
-        return jwtCookie;
+        return jwt;
     }
 
 
@@ -122,9 +121,16 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    public User getUserFromCookie(String cookie) {
-        String id = jwtUtils.getIdFromJwtToken(cookie);
-        User user = userRepository.findById(id).get();
+    public User getUserFromJwt(HttpServletRequest request) {
+        String authorizationHeader = request.getHeader("Authorization");
+        String token ="";
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            token = authorizationHeader.substring(7);
+        } else {
+            throw new RuntimeException("Invalid Jwt Token");
+        }
+
+        User user = findById(jwtUtils.getIdFromJwtToken(token));
         return user;
     }
 

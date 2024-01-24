@@ -9,6 +9,7 @@ import com.ashish.shopoclock.service.ProductService;
 import com.ashish.shopoclock.service.UserService;
 import com.ashish.shopoclock.dto.request.ProductUpdateRequest;
 import com.ashish.shopoclock.exception.ProductNotFoundException;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -59,7 +60,6 @@ public class ProductController {
     @GetMapping("/product/{id}")
     public ResponseEntity<ProductResponse> getProduct(@PathVariable("id") String id) throws ProductNotFoundException {
         ProductResponse response = new ProductResponse();
-//        response.setProduct(productService.findById(id).get());
         response.setProduct(productService.findById(id));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -75,9 +75,9 @@ public class ProductController {
 
     @PostMapping("/admin/product/new")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ProductResponse> createProduct(@Valid @RequestBody Product product, @CookieValue("ashish") String ashishCookie){
+    public ResponseEntity<ProductResponse> createProduct(@Valid @RequestBody Product product, HttpServletRequest request){
 
-        User user = userService.getUserFromCookie(ashishCookie);
+        User user = userService.getUserFromJwt(request);
         product.setUser(user.getId());
         Product _product = productService.save(product);
 
@@ -96,7 +96,7 @@ public class ProductController {
 
     @PutMapping("/review")
     @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<?> createProductReview(@RequestBody Map<String, String> payload, @CookieValue("ashish") String ashishCookie) throws ProductNotFoundException {
+    public ResponseEntity<?> createProductReview(@RequestBody Map<String, String> payload, HttpServletRequest request) throws ProductNotFoundException {
 
         if (payload.get("rating") == null){
             throw new IllegalArgumentException("Please Enter the rating!");
@@ -104,13 +104,9 @@ public class ProductController {
 
         String comment = payload.get("comment") == null ? "" : payload.get("comment");
 
-        User user = userService.getUserFromCookie(ashishCookie);
-
-//        Optional<Product> productData = productService.findById(payload.get("productId"));
-//        Product product = productData.get();
+        User user = userService.getUserFromJwt(request);
 
         Product product = productService.findById(payload.get("productId"));
-
 
         // Checking if reviews already have any review from the current user
         Optional<Review> existingReview = product.getReviews().stream().filter(rev -> rev.getUser().equals(user.getId())).findFirst();
@@ -131,32 +127,6 @@ public class ProductController {
             product.setNumOfReviews(reviews.size());
         }
 
-
-        // Checking if reviews already have any review from the current user (true/false)
-//        boolean isReviewed = product.getReviews().stream().anyMatch(rev ->
-//                rev.getUser().equals(user.getId()));
-//
-//        if (isReviewed) {
-//            product.getReviews().forEach(rev -> {
-//                if (rev.getUser().equals(user.getId())){
-//                    rev.setRating(Double.valueOf(payload.get("rating")));
-//                    rev.setComment(comment);
-//                }
-//            });
-//        } else {
-//            Review newReview = new Review(
-//                    user.getId(),
-//                    user.getName(),
-//                    Double.valueOf(payload.get("rating")),
-//                    comment
-//            );
-//
-//            List<Review> reviews = product.getReviews();
-//            reviews.add(newReview);
-//            product.setReviews(reviews);
-//            product.setNumOfReviews(reviews.size());
-//        }
-
         double avg = 0d;
         avg = product.getReviews().stream().map(rev -> rev.getRating())
                 .reduce(0.0, (a,b) -> a+b);
@@ -168,6 +138,7 @@ public class ProductController {
         ProductResponse response = new ProductResponse();
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+
 
     @GetMapping("/reviews")
     public ResponseEntity<ProductResponse> getProductReviews(@RequestParam("id") String id) throws ProductNotFoundException {

@@ -21,7 +21,6 @@ public class APIExceptionHandler {
 
 
 
-
     // 404
     @ExceptionHandler
     public ResponseEntity<APIError> usernameNotFoundExceptionHandler(UserNotFoundException ex) {
@@ -29,7 +28,6 @@ public class APIExceptionHandler {
         return new ResponseEntity<>(
                 new APIError(ex.getLocalizedMessage()), HttpStatus.NOT_FOUND);
     }
-
 
 
     // 404
@@ -68,7 +66,6 @@ public class APIExceptionHandler {
     }
 
 
-
     @ExceptionHandler
     public ResponseEntity<APIError> methodArgumentNotValidExceptionHandler(MethodArgumentNotValidException  ex) {
 
@@ -77,7 +74,6 @@ public class APIExceptionHandler {
         return new ResponseEntity<>(
                 new APIError(fieldError.getField() + ": " + fieldError.getDefaultMessage()), HttpStatus.BAD_REQUEST);
     }
-
 
 
     // 500

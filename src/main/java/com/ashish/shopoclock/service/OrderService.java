@@ -26,11 +26,6 @@ public class OrderService {
     }
 
     public void delete(String id){
-//        Optional<Order> orderData = orderRepository.findById(id);
-//        if (orderData.isEmpty()){
-//            throw new OrderNotFoundException("No order found with the given ID: " + id);
-//        }
-
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new OrderNotFoundException("No order found with the given ID: " + id));
 

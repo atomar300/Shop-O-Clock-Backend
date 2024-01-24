@@ -8,11 +8,13 @@ import com.ashish.shopoclock.service.OrderService;
 import com.ashish.shopoclock.service.ProductService;
 import com.ashish.shopoclock.service.UserService;
 import com.ashish.shopoclock.model.order.Order;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -36,9 +38,8 @@ public class OrderController {
 
     @PreAuthorize("hasRole('USER')")
     @PostMapping("/order/new")
-    public ResponseEntity<OrderResponse> createOrder(@Valid @RequestBody Order order,
-                                                     @CookieValue("ashish") String ashishCookie){
-        User user = userService.getUserFromCookie(ashishCookie);
+    public ResponseEntity<OrderResponse> createOrder(@Valid @RequestBody Order order, HttpServletRequest request){
+        User user = userService.getUserFromJwt(request);
         order.setUser(user.getId());
         order.setPaidAt(LocalDateTime.now());
 
@@ -61,8 +62,8 @@ public class OrderController {
     }
 
 
-    @PreAuthorize("hasRole('USER')")
     @GetMapping("/order/{id}")
+    @PreAuthorize("hasRole('USER')")
     public ResponseEntity<?> getSingleOrder(@PathVariable("id") String id){
         Order order = orderService.findById(id);
         User user = userService.findById(order.getUser());
@@ -100,8 +101,8 @@ public class OrderController {
 
     @PreAuthorize("hasRole('USER')")
     @GetMapping("/orders/me")
-    public ResponseEntity<OrderResponse> myOrders(@CookieValue("ashish") String ashishCookie){
-        User user = userService.getUserFromCookie(ashishCookie);
+    public ResponseEntity<OrderResponse> myOrders(HttpServletRequest request ){
+        User user = userService.getUserFromJwt(request);
         List<Order> orders = orderService.findByUser(user.getId());
 
         OrderResponse response = new OrderResponse();
