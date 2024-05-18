@@ -37,7 +37,7 @@ import com.ashish.shopoclock.dto.request.LoginRequest;
 import com.ashish.shopoclock.dto.request.SignupRequest;
 
 
-@CrossOrigin(origins = "https://shop-o-clock.vercel.app/", maxAge = 3600)
+@CrossOrigin
 @EnableAsync
 @RestController
 @RequestMapping("/api/v1")
@@ -76,7 +76,7 @@ public class UserController {
 
 
     @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@Valid @ModelAttribute SignupRequest signUpRequest) throws Exception {
+    public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) throws Exception {
         if (userService.existsByEmail(signUpRequest.getEmail())) {
             throw new Exception("Email is already taken!");
         }

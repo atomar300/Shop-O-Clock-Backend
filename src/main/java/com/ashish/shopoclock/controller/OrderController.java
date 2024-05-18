@@ -21,7 +21,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 
-@CrossOrigin(origins = "https://shop-o-clock.vercel.app/", maxAge = 3600)
+@CrossOrigin
 @RestController
 @RequestMapping("/api/v1")
 public class OrderController {

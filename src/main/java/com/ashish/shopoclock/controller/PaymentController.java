@@ -14,7 +14,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestController
-@CrossOrigin(origins = "https://shop-o-clock.vercel.app/", maxAge = 3600)
+@CrossOrigin
 @RequestMapping("/api/v1")
 public class PaymentController {
 

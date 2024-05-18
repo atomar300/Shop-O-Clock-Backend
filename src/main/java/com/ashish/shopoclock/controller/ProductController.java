@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-@CrossOrigin(origins = "https://shop-o-clock.vercel.app/", maxAge = 3600)
+@CrossOrigin
 @RestController
 @RequestMapping("/api/v1")
 public class ProductController {
